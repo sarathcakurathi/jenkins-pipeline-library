@@ -1,11 +1,26 @@
 def call(body) {
-    // evaluate the body block, and collect configuration into the object
     def pipelineParams= [:]
     body.resolveStrategy = Closure.DELEGATE_FIRST
     body.delegate = pipelineParams
     body()
-
-    pipeline {
-        // our complete declarative pipeline can go in here
-    }
+	node {
+		try {
+			sh 'echo Params: pipelineParams'
+			stage('Clone') {
+				git branch: pipelineParams.branch, 
+				url: pipelineParams.scmUrl
+			}
+			
+			stage('Build') {
+				sh './build.sh'
+			}
+		}
+		catch (exception) {
+			// If there was an exception thrown, the build failed
+			currentBuild.result = "FAILED"
+			throw exception
+		} finally {
+			cleanWs()
+		}
+	}
 }
